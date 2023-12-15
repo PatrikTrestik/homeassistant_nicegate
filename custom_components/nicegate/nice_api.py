@@ -1,6 +1,7 @@
 """API for Nice gate WiFi interface."""
 import asyncio
 import base64
+import binascii
 import hashlib
 import logging
 import random
@@ -20,7 +21,7 @@ class NiceGateApi:
         """Initialize API for Nice gate."""
         self.host = host
         self.target = mac
-        self.source = "python"
+        self.source = f"python_{username}"
         self.username = username
         self.descr = "Home assistant integration"
         self.pwd = pwd
@@ -84,6 +85,12 @@ class NiceGateApi:
         sign = self.__sha256(msg_hash, session_password)
         return "<Sign>" + base64.b64encode(sign).decode("utf-8") + "</Sign>"
 
+    def __get_setup_code_check(self, setup_code:str):
+        client_challenge = self.__hex_to_bytearray(self.client_challenge)
+        setup_code_check = bytes(setup_code, 'utf-8') + client_challenge[::-1] + bytes("Nice4U",'utf-8')
+        crc32 = binascii.crc32(setup_code_check) & 0xFFFFFFFF
+        return "{0:08X}".format(crc32)
+
     # Check if sign needed
     def __is_sign_needed(self, command_type):
         if command_type in ("CONFIG", "VERIFY", "CONNECT", "PAIR"):
@@ -108,11 +115,13 @@ class NiceGateApi:
         return
 
     # Get all data from socket
-    async def __recvall(self):
+    async def __recvall(self, reader=None):
         data = b""
+        if reader is None:
+            reader=self.serv_reader
         while True:
             try:
-                part = await self.serv_reader.readuntil(b"\x03")
+                part = await reader.readuntil(b"\x03")
                 if part == b"":
                     _LOGGER.error("Disconnected")
                     return ""
@@ -170,9 +179,10 @@ class NiceGateApi:
 
 
     async def __process_event(self, msg):
+        _LOGGER.debug(msg)
         resp = ET.fromstring(msg)
         if resp.tag == "Event":
-            if resp.attrib["type"] == "CHANGE":
+            if resp.attrib.get("type") == "CHANGE":
                 self.gate_status = resp.findtext(
                     "./Devices/Device/Properties/DoorStatus"
                 )
@@ -180,7 +190,7 @@ class NiceGateApi:
                 if self.update_callback is not None:
                     await self.update_callback()
         if resp.tag == "Response":
-            if resp.attrib["type"] == "STATUS":
+            if resp.attrib.get("type") == "STATUS":
                 self.gate_status = resp.findtext(
                     "./Devices/Device/Properties/DoorStatus"
                 )
@@ -192,6 +202,91 @@ class NiceGateApi:
         if self.serv_writer is not None and self.serv_reader is not None:
             return True
         return await self.connect()
+
+    async def pair(self, setup_code:str)->str:
+        self.pwd=None
+        writer=None
+        if self.username is None or self.username == "":
+            return None
+        try:
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            ctx.check_hostname = False
+
+            reader, writer = await asyncio.open_connection(self.host, 443, ssl=ctx)
+
+            msg=self.__build_message(
+                    'PAIR',
+                    (f'<Authentication username="{self.username}" cc="{self.client_challenge}" '
+                        f'check="{self.__get_setup_code_check(setup_code)}" CType="phone" OSType="Android" '
+                        'OSVer="6.0.1" desc="hass integration" />')
+                )
+            writer.write(msg)
+            await writer.drain()
+            pair = await self.__recvall(reader)
+            match= re.search(r'<Authentication\s+id=[\'"]?([^\'" >]+)[\'"]?\s+username=[\'"]?([^\'" >]+)[\'"]?\s+pwd=[\'"]?([^\'" >]+)[\'"]?', pair)
+            if match:
+                self.pwd=match.groups()[2]
+                _LOGGER.debug(f"User paired. Password {self.pwd}")
+            else:
+                _LOGGER.warning("No user found")
+        except ConnectionError as error_msg:
+            _LOGGER.error(error_msg)
+        except TimeoutError as timeout_err:
+            _LOGGER.warning("Timeout",timeout_err)
+        except Exception as ex:
+            _LOGGER.error("Unknown exception",ex)
+
+        if writer is not None:
+            writer.close()
+
+        return self.pwd
+
+    async def verify_connect(self)->str:
+        status="error"
+        writer=None
+        if self.username is None or self.username == "":
+            return "error"
+        try:
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            ctx.check_hostname = False
+
+            reader, writer = await asyncio.open_connection(self.host, 443, ssl=ctx)
+
+            msg=self.__build_message("VERIFY", f'<User username="{self.username}"/>')
+            writer.write(msg)
+            await writer.drain()
+            verify = await self.__recvall(reader)
+            match=re.search(r'<Authentication\s+id=[\'"]?([^\'" >]+)[\'"]?\s+username=[\'"]?([^\'" >]+)[\'"]?\s+perm=[\'"]?([^\'" >]+)[\'"]?', verify)
+            if match:
+                perm=match.groups()[2]
+                _LOGGER.debug(f"User connected. Status '{perm}'")
+                if perm=="wait":
+                    status="wait"
+                else:
+                    msg=self.__build_message(
+                        "CONNECT",
+                        '<Authentication username="{}" cc="{}"/>'.format(
+                            self.username, self.client_challenge
+                        ),
+                    )
+                    writer.write(msg)
+                    await writer.drain()
+                    connect = await self.__recvall(reader)
+                    self.__find_server_challenge(connect)
+                    status="connect"
+            else:
+                _LOGGER.warning("No user found")
+        except ConnectionError as error_msg:
+            _LOGGER.error(error_msg)
+        except TimeoutError as timeout_err:
+            _LOGGER.warning("Timeout",timeout_err)
+        except Exception as ex:
+            _LOGGER.error("Unknown exception",ex)
+
+        if writer is not None:
+            writer.close()
+
+        return status
 
     async def connect(self):
         """Connect to IT4WIFI."""

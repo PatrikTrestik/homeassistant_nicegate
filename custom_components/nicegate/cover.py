@@ -30,6 +30,7 @@ STATES_MAP = {
     "closing": STATE_CLOSING,
     "open": STATE_OPEN,
     "opening": STATE_OPENING,
+    "stopped": STATE_OPEN
 }
 
 
@@ -54,7 +55,7 @@ class NiceCoordinator(DataUpdateCoordinator):
             # Name of the data. For logging purposes.
             name="Nice Gate",
             # Polling interval. Will only be polled if there are subscribers.
-            update_interval=timedelta(minutes=5),
+            update_interval=timedelta(minutes=4),
         )
         self.api = api
         self.api.set_update_callback(self.async_api_updated)
@@ -141,7 +142,7 @@ class NiceGate(CoordinatorEntity, CoverEntity):
         await self.coordinator.async_command("open")
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
-        """Open the cover."""
+        """Stop the cover."""
         if self._state in [STATE_OPEN, STATE_CLOSED]:
             return
         await self.coordinator.async_command("stop")

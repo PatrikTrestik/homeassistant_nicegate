@@ -1,22 +1,31 @@
 {
     "config": {
-        "abort": {
-            "already_configured": "Device is already configured"
-        },
-        "error": {
-            "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error"
-        },
         "step": {
             "user": {
                 "data": {
                     "host": "Host",
                     "mac": "MAC address",
-                    "password": "Password",
                     "username": "Username"
+                },
+                "data_description": {
+                    "username": "Required only in special cases. Don't use existing username!"
+                }
+            },
+            "pair": {
+                "title": "Pairing device",
+                "data": {
+                    "setup_code": "Setup code"
                 }
             }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error",
+            "waiting_permission": "Waiting for permission to connect. Open mobile app and allow user to connect, than retry here."
+        },
+        "abort": {
+            "already_configured": "Device is already configured"
         }
     }
 }

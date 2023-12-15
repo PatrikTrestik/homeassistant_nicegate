@@ -3,19 +3,29 @@
     "step": {
       "user": {
         "data": {
-          "host": "[%key:common::config_flow::data::host%]",
-          "username": "[%key:common::config_flow::data::username%]",
-          "password": "[%key:common::config_flow::data::password%]"
+          "host": "Host",
+          "mac": "MAC address",
+          "username": "Username"
+        },
+        "data_description": {
+          "username": "Required only in special cases. Don't use existing username!"
+        }
+      },
+      "pair": {
+        "title": "Pairing device",
+        "data": {
+          "setup_code": "Setup code"
         }
       }
     },
     "error": {
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-      "unknown": "[%key:common::config_flow::error::unknown%]"
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication",
+      "unknown": "Unexpected error",
+      "waiting_permission": "Waiting for permission to connect. Open mobile app and allow user to connect, than retry here."
     },
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+      "already_configured": "Device is already configured"
     }
   }
 }
