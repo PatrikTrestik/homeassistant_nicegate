@@ -110,7 +110,7 @@ class NiceGateApi:
                     break
                 await self.__process_event(msg)
         except Exception as ex:
-            _LOGGER.error("Unknown error", ex)
+            _LOGGER.error(ex, exc_info=True)
         await self.disconnect()
         return
 
@@ -211,7 +211,7 @@ class NiceGateApi:
         try:
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS)
             ctx.check_hostname = False
-
+            await asyncio.sleep(0.01)
             reader, writer = await asyncio.open_connection(self.host, 443, ssl=ctx)
 
             msg=self.__build_message(
@@ -230,11 +230,11 @@ class NiceGateApi:
             else:
                 _LOGGER.warning("No user found")
         except ConnectionError as error_msg:
-            _LOGGER.error(error_msg)
-        except TimeoutError as timeout_err:
-            _LOGGER.warning("Timeout",timeout_err)
+            _LOGGER.error( error_msg, exc_info=True)
+        except TimeoutError:
+            _LOGGER.warning("Timeout")
         except Exception as ex:
-            _LOGGER.error("Unknown exception",ex)
+            _LOGGER.error(ex, exc_info=True)
 
         if writer is not None:
             writer.close()
@@ -250,6 +250,7 @@ class NiceGateApi:
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS)
             ctx.check_hostname = False
 
+            await asyncio.sleep(0.01)
             reader, writer = await asyncio.open_connection(self.host, 443, ssl=ctx)
 
             msg=self.__build_message("VERIFY", f'<User username="{self.username}"/>')
@@ -277,11 +278,11 @@ class NiceGateApi:
             else:
                 _LOGGER.warning("No user found")
         except ConnectionError as error_msg:
-            _LOGGER.error(error_msg)
-        except TimeoutError as timeout_err:
-            _LOGGER.warning("Timeout",timeout_err)
+            _LOGGER.error( error_msg, exc_info=True)
+        except TimeoutError:
+            _LOGGER.warning("Timeout")
         except Exception as ex:
-            _LOGGER.error("Unknown exception",ex)
+            _LOGGER.error(ex, exc_info=True)
 
         if writer is not None:
             writer.close()
@@ -297,6 +298,8 @@ class NiceGateApi:
                 await self.disconnect()
             if self._loop_task is not None:
                 self._loop_task.cancel()
+
+            await asyncio.sleep(0.01)
             reader, writer = await asyncio.open_connection(self.host, 443, ssl=ctx)
             self.serv_reader = reader
             self.serv_writer = writer
@@ -322,11 +325,11 @@ class NiceGateApi:
                 return True
             _LOGGER.warning("No user found")
         except ConnectionError as error_msg:
-            _LOGGER.error(error_msg)
-        except TimeoutError as timeout_err:
-            _LOGGER.warning("Timeout",timeout_err)
+            _LOGGER.error( error_msg, exc_info=True)
+        except TimeoutError:
+            _LOGGER.warning("Timeout")
         except Exception as ex:
-            _LOGGER.error("Unknown exception",ex)
+            _LOGGER.error(ex, exc_info=True)
         return False
 
     async def status(self, cmd="STATUS"):
