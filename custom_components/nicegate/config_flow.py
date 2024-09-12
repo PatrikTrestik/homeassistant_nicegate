@@ -24,6 +24,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required("host"): str,
         vol.Required("mac"): str,
         vol.Optional("username"): str,
+        #vol.Optional("password"): str,
     }
 )
 
@@ -82,6 +83,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             mac=format_mac(data.get("mac")).upper()
             ip=socket.gethostbyname(host)
             username=data.get("username")
+            password = data.get("password")
             if username is None or username == "":
                 username = "hass_nicegate"
         except Exception as e:
@@ -91,6 +93,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.data["mac"]=mac
         self.data["ip"]=ip
         self.data["username"]=username
+        self.data["password"]=password
         self.data["device_id"]=mac
         return self.data
 

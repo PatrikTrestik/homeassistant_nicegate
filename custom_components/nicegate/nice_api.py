@@ -35,6 +35,7 @@ class NiceGateApi:
         self.gate_status = None
         self.serv_reader: asyncio.StreamReader = None
         self.serv_writer: asyncio.StreamWriter = None
+        self._keep_alive_task: asyncio.Task = None
         self._loop_task: asyncio.Task = None
         self.update_callback = None
 
@@ -102,6 +103,15 @@ class NiceGateApi:
         _LOGGER.debug(xml)
         return ("\u0002" + xml + "\u0003").encode()
 
+    async def __keep_alive_loop(self):
+        try:
+            while True:
+                await asyncio.sleep(60)
+                await self.status()
+        except Exception:
+            _LOGGER.exception()
+        await self.disconnect()
+
     async def __recvloop(self):
         try:
             while True:
@@ -109,10 +119,9 @@ class NiceGateApi:
                 if msg == "":
                     break
                 await self.__process_event(msg)
-        except Exception as ex:
-            _LOGGER.error(ex, exc_info=True)
+        except Exception:
+            _LOGGER.exception()
         await self.disconnect()
-        return
 
     # Get all data from socket
     async def __recvall(self, reader=None):
@@ -298,6 +307,8 @@ class NiceGateApi:
                 await self.disconnect()
             if self._loop_task is not None:
                 self._loop_task.cancel()
+            if self._keep_alive_task is not None:
+                self._keep_alive_task.cancel()
 
             await asyncio.sleep(0.01)
             reader, writer = await asyncio.open_connection(self.host, 443, ssl=ctx)
@@ -311,15 +322,14 @@ class NiceGateApi:
             if re.search(r'Authentication\sid=[\'"]?([^\'" >]+)', verify):
                 msg=self.__build_message(
                     "CONNECT",
-                    '<Authentication username="{}" cc="{}"/>'.format(
-                        self.username, self.client_challenge
-                    ),
+                    f'<Authentication username="{self.username}" cc="{self.client_challenge}"/>',
                 )
                 self.serv_writer.write(msg)
                 await self.serv_writer.drain()
                 connect = await self.__recvall()
                 self.__find_server_challenge(connect)
                 # start loop
+                self._keep_alive_task = asyncio.create_task(self.__keep_alive_loop())
                 self._loop_task = asyncio.create_task(self.__recvloop())
                 # asyncio.create_task(self.status())
                 return True
@@ -339,14 +349,19 @@ class NiceGateApi:
             self.serv_writer.write(msg)
             await self.serv_writer.drain()
 
+    async def info(self, cmd="INFO"):
+        """Get IT4WIFI info."""
+        if await self._ensure_connected():
+            msg = self.__build_message(cmd, "")
+            self.serv_writer.write(msg)
+            await self.serv_writer.drain()
+
     async def change(self, command):
         """Open, close or stop gates."""
         if await self._ensure_connected():
-            msg= self.__build_message(
+            msg = self.__build_message(
                 "CHANGE",
-                '<Devices><Device id="1">\n<Services><DoorAction>{}</DoorAction>\n</Services ></Device></Devices>'.format(
-                    command
-                ),
+                f'<Devices><Device id="1">\n<Services><DoorAction>{command}</DoorAction>\n</Services ></Device></Devices>',
             )
             self.serv_writer.write(msg)
             await self.serv_writer.drain()
@@ -356,9 +371,7 @@ class NiceGateApi:
         if await self._ensure_connected():
             msg= self.__build_message(
                 "CHECK",
-                '<Authentication id="{}" username="{}"/>'.format(
-                    self.session_id, self.username
-                ),
+                f'<Authentication id="{self.session_id}" username="{self.username}"/>',
             )
             self.serv_writer.write(msg)
             await self.serv_writer.drain()
