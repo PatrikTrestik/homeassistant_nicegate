@@ -2,15 +2,11 @@
   "domain": "nicegate",
   "name": "Nice gate",
   "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/nicegate",
-  "requirements": [],
-  "ssdp": [],
-  "zeroconf": [],
-  "homekit": {},
-  "dependencies": [],
+  "documentation": "https://github.com/PatrikTrestik/homeassistant_nicegate",
+  "issue_tracker": "https://github.com/PatrikTrestik/homeassistant_nicegate/issues",
   "codeowners": [
     "@PatrikTrestik"
   ],
   "iot_class": "local_push",
-  "version": "1.2.0"
+  "version": "1.3.0"
 }
