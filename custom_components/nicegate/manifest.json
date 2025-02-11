@@ -2,12 +2,8 @@
   "domain": "nicegate",
   "name": "Nice gate",
   "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/nicegate",
-  "requirements": [],
-  "ssdp": [],
-  "zeroconf": [],
-  "homekit": {},
-  "dependencies": [],
+  "documentation": "https://github.com/PatrikTrestik/homeassistant_nicegate",
+  "issue_tracker": "https://github.com/PatrikTrestik/homeassistant_nicegate/issues",
   "codeowners": [
     "@PatrikTrestik"
   ],
