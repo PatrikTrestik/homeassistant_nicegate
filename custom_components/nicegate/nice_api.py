@@ -220,6 +220,8 @@ class NiceGateApi:
         try:
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS)
             ctx.check_hostname = False
+            ctx.options |= 0x4  # ssl.OP_LEGACY_SERVER_CONNECT
+
             await asyncio.sleep(0.01)
             reader, writer = await asyncio.open_connection(self.host, 443, ssl=ctx)
 
@@ -258,6 +260,7 @@ class NiceGateApi:
         try:
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS)
             ctx.check_hostname = False
+            ctx.options |= 0x4  # ssl.OP_LEGACY_SERVER_CONNECT
 
             await asyncio.sleep(0.01)
             reader, writer = await asyncio.open_connection(self.host, 443, ssl=ctx)
@@ -303,6 +306,8 @@ class NiceGateApi:
         try:
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS)
             ctx.check_hostname = False
+            ctx.options |= 0x4  # ssl.OP_LEGACY_SERVER_CONNECT
+            
             if self.serv_writer is not None or self.serv_reader is not None:
                 await self.disconnect()
             if self._loop_task is not None:
