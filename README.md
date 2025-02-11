@@ -2,8 +2,12 @@
 # homeassistant_nicegate
 Home Assistant integration for Nice gate actuator connected by IT4WiFi
 
+# Installation
+This repository is compatible with HACS. You can use this link to install the integration.
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=PatrikTrestik&repository=homeassistant_nicegate&category=integration)
+
 # Initial config
-Configuration flow is not fully debug.
+Configuration flow is not fully debuged.
 Be prepared that there can be unknown state or error during setup.
 
 * Username - you can leave it empty and continue with default "hass_nicegate". Never use existing username because it will reset your access.
